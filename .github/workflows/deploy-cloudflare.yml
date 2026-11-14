@@ -29,6 +29,8 @@ jobs:
               exit 1
             fi
           done
+      - name: Run regression tests
+        run: npm test
       - name: Install Wrangler
         run: npm install --no-save wrangler@4
       - name: Deploy Worker and static interface
