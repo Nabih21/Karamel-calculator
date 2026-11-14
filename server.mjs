@@ -26,9 +26,9 @@ const text=(name,value)=>({[name]:{title:[{text:{content:String(value).slice(0,2
 const n=(name,value)=>({[name]:{number:Number(value)}});
 const rel=(name,id)=>({[name]:{relation:[{id}]}});
 function validName(s){if(typeof s!=='string'||!s.trim()||s.length>200)throw Error('Enter a name (1–200 characters).');return s.trim()}
-function validNumber(x,positive=false){if(x===null||x===''||!Number.isFinite(Number(x))||Number(x)<0||(positive&&Number(x)===0))throw Error('Enter a valid nonnegative number.');return Number(x)}
+function validNumber(x,positive=false,optional=false){if(optional&&(x===null||x===undefined||x===''))return null;if(x===null||x===undefined||x===''||!Number.isFinite(Number(x))||Number(x)<0||(positive&&Number(x)===0))throw Error('Enter a valid nonnegative number.');return Number(x)}
 function validId(s){if(!/^[a-f0-9-]{32,36}$/i.test(String(s)))throw Error('Invalid record identifier');return s}
-function props(k,d){if(k==='ingredients'||k==='packaging')return{...text(k==='ingredients'?'Ingrédient':'Emballage',validName(d.name)),...n(k==='ingredients'?'Poids acheté (g)':'Quantité achetée',validNumber(d.weight,true)),...n("Prix d'achat (CAD)",validNumber(d.price))};
+function props(k,d){if(k==='ingredients'||k==='packaging')return{...text(k==='ingredients'?'Ingrédient':'Emballage',validName(d.name)),...n(k==='ingredients'?'Poids acheté (g)':'Quantité achetée',validNumber(d.weight,true,true)),...n("Prix d'achat (CAD)",validNumber(d.price,false,true))};
 if(k==='recipes')return{...text('Recette',validName(d.name)),...n('Pièces produites',validNumber(d.pieces,true)),...n('Ratio coût cible',validNumber(d.ratio,true))};
 if(k==='recipeIngredients'||k==='recipePackaging')return{...text('Ligne',validName(d.name)),...rel('Recette',validId(d.recipe)),...rel(k==='recipeIngredients'?'Ingrédient':'Emballage',validId(d.item)),...n(k==='recipeIngredients'?'Quantité (g)':'Quantité',validNumber(d.qty,true))};
 if(k==='overhead')return{...text('Frais général',validName(d.name)),...n('Montant (CAD)',validNumber(d.amount)),...rel('Recette',validId(d.recipe))};throw Error('Invalid entity')}
@@ -42,7 +42,7 @@ return notion('/pages/'+data.id,'PATCH',{properties});}throw Error('Unknown acti
 async function handle(req,res){const url=new URL(req.url||'/', 'http://localhost');
 if(url.pathname==='/health')return json(res,200,{ok:true,configured:Boolean(TOKEN&&PASSWORD)});
 if(url.pathname.startsWith('/api/')){if(!TOKEN||!PASSWORD)return json(res,503,{error:'Add NOTION_TOKEN and APP_PASSWORD in Render Environment.'});if(!authorized(req))return json(res,401,{error:'Incorrect application password.'});
-try{if(url.pathname==='/api/data'&&req.method==='GET'){const pairs=await Promise.all(Object.entries(DS).map(async ([k,id])=>[k,(await all(id)).map(x=>transform(k,x))]));return json(res,200,Object.fromEntries(pairs));}
+try{if(url.pathname==='/api/data'&&req.method==='GET'){const pairs=[];for(const [k,id] of Object.entries(DS))pairs.push([k,(await all(id)).map(x=>transform(k,x))]);return json(res,200,Object.fromEntries(pairs));}
 if(url.pathname==='/api/mutate'&&req.method==='POST'){let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>25000)throw Error('Request too large')}const result=await mutate(JSON.parse(raw||'{}'));return json(res,200,{id:result.id,ok:true});}
 return json(res,404,{error:'Unknown API route'});}catch(e){return json(res,400,{error:e.message})}}
 if(req.method!=='GET')return json(res,405,{error:'Not allowed'});
