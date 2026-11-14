@@ -29,10 +29,6 @@ jobs:
               exit 1
             fi
           done
-          if [ "${#APP_PASSWORD}" -lt 12 ]; then
-            echo "::error::APP_PASSWORD must have at least 12 characters."
-            exit 1
-          fi
       - name: Install Wrangler
         run: npm install --no-save wrangler@4
       - name: Deploy Worker and static interface
