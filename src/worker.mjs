@@ -33,7 +33,7 @@ return notion('/pages/'+data.id,'PATCH',{properties});}throw Error('Unknown acti
 
 const response=(status,value)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
 async function authorized(request,password){
- if(!password||password.length<12)return false;
+ if(!password)return false;
  const candidate=request.headers.get('X-Karamel-Password')||'';
  const bytes=new TextEncoder();
  const [a,b]=await Promise.all([crypto.subtle.digest('SHA-256',bytes.encode(candidate)),crypto.subtle.digest('SHA-256',bytes.encode(password))]);
@@ -41,9 +41,9 @@ async function authorized(request,password){
 }
 export default {async fetch(request,env){
  const url=new URL(request.url);
- if(url.pathname==='/health')return response(200,{ok:true,configured:Boolean(env.NOTION_TOKEN&&env.APP_PASSWORD?.length>=12)});
+ if(url.pathname==='/health')return response(200,{ok:true,configured:Boolean(env.NOTION_TOKEN&&Boolean(env.APP_PASSWORD))});
  if(url.pathname.startsWith('/api/')){
-   if(!env.NOTION_TOKEN||!env.APP_PASSWORD||env.APP_PASSWORD.length<12)return response(503,{error:'Configure NOTION_TOKEN and APP_PASSWORD as Cloudflare Worker secrets.'});
+   if(!env.NOTION_TOKEN||!env.APP_PASSWORD)return response(503,{error:'Configure NOTION_TOKEN and APP_PASSWORD as Cloudflare Worker secrets.'});
    if(!(await authorized(request,env.APP_PASSWORD)))return response(401,{error:'Incorrect application password.'});
    try{
      if(url.pathname==='/api/data'&&request.method==='GET'){
