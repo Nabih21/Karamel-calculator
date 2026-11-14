@@ -8,7 +8,7 @@ const root=path.dirname(fileURLToPath(import.meta.url));
 const TOKEN=process.env.NOTION_TOKEN, PASSWORD=process.env.APP_PASSWORD;
 const DS={ingredients:'e2c7f0e5-d60e-49af-8693-41b278400c44',packaging:'4a932663-d329-4ebd-b2f1-1324703ae0ed',recipes:'db1700c0-6eab-4456-8f49-ab207e0301c4',recipeIngredients:'d27625c1-6bc4-4006-8f42-cf37081c7b21',recipePackaging:'d31b0d4c-5bd0-442f-9a75-2f311a566d15',overhead:'140d145b-e734-44c0-bdec-e4b5411b3718'};
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'});res.end(JSON.stringify(data));};
-const authorized=req=>{if(!TOKEN||!PASSWORD||PASSWORD.length<12)return false;const a=crypto.createHash('sha256').update(String(req.headers['x-karamel-password']||'')).digest();const b=crypto.createHash('sha256').update(PASSWORD).digest();return crypto.timingSafeEqual(a,b)};
+const authorized=req=>{if(!TOKEN||!PASSWORD)return false;const a=crypto.createHash('sha256').update(String(req.headers['x-karamel-password']||'')).digest();const b=crypto.createHash('sha256').update(PASSWORD).digest();return crypto.timingSafeEqual(a,b)};
 async function notion(route,method='GET',body){for(let i=0;i<4;i++){const r=await fetch('https://api.notion.com/v1'+route,{method,headers:{'Authorization':'Bearer '+TOKEN,'Notion-Version':'2025-09-03','Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const j=await r.json().catch(()=>({}));if(r.status===429&&i<3){await new Promise(resolve=>setTimeout(resolve,Math.min(8000,1000*Number(r.headers.get('retry-after')||1))));continue;}if(!r.ok)throw new Error(j.message||'Notion request failed: '+r.status);return j;}}
 async function all(ds){let results=[],cursor;do{const x=await notion('/data_sources/'+ds+'/query','POST',{page_size:100,...(cursor?{start_cursor:cursor}:{})});results.push(...x.results);cursor=x.has_more?x.next_cursor:null;}while(cursor&&results.length<10000);return results;}
 const title=(p,n)=>(p[n]?.title||[]).map(x=>x.plain_text||'').join('');
@@ -40,8 +40,8 @@ else if(entity==='recipeIngredients'||entity==='recipePackaging')properties={...
 else properties=props(entity,data);
 return notion('/pages/'+data.id,'PATCH',{properties});}throw Error('Unknown action')}
 async function handle(req,res){const url=new URL(req.url||'/', 'http://localhost');
-if(url.pathname==='/health')return json(res,200,{ok:true,configured:Boolean(TOKEN&&PASSWORD&&PASSWORD.length>=12)});
-if(url.pathname.startsWith('/api/')){if(!TOKEN||!PASSWORD||PASSWORD.length<12)return json(res,503,{error:'Add NOTION_TOKEN and APP_PASSWORD in Render Environment.'});if(!authorized(req))return json(res,401,{error:'Incorrect application password.'});
+if(url.pathname==='/health')return json(res,200,{ok:true,configured:Boolean(TOKEN&&PASSWORD)});
+if(url.pathname.startsWith('/api/')){if(!TOKEN||!PASSWORD)return json(res,503,{error:'Add NOTION_TOKEN and APP_PASSWORD in Render Environment.'});if(!authorized(req))return json(res,401,{error:'Incorrect application password.'});
 try{if(url.pathname==='/api/data'&&req.method==='GET'){const pairs=await Promise.all(Object.entries(DS).map(async ([k,id])=>[k,(await all(id)).map(x=>transform(k,x))]));return json(res,200,Object.fromEntries(pairs));}
 if(url.pathname==='/api/mutate'&&req.method==='POST'){let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>25000)throw Error('Request too large')}const result=await mutate(JSON.parse(raw||'{}'));return json(res,200,{id:result.id,ok:true});}
 return json(res,404,{error:'Unknown API route'});}catch(e){return json(res,400,{error:e.message})}}
