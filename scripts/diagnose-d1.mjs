@@ -4,7 +4,7 @@ const config=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
 const db=config.d1_databases[0].database_id;
 const data={};
 for(const entity of ['ingredients','packaging','recipes','recipeIngredients','recipePackaging','overhead']){
- const response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${db}/query`,{method:'POST',headers:{Authorization:`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify({sql:`SELECT * FROM "${entity}"`,params:[]})});
+ const response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${db}/query`,{method:'POST',headers:{Authorization:`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify({sql:`SELECT * FROM "${entity==='overhead'?'standardOverhead':entity}"`,params:[]})});
  const result=await response.json();if(!response.ok||!result.success)throw Error('D1 diagnostic query failed');data[entity]=result.result[0].results;
 }
 // Only the requesting workspace can decrypt the record values; logs contain ciphertext.

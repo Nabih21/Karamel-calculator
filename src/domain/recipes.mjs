@@ -15,7 +15,7 @@ export function validateMutation({action,entity,data:d={}}){
  if(['ingredients','packaging'].includes(entity)){out.weight=validNumber(d.weight,true,true);out.price=validNumber(d.price,false,true)}
  if(entity==='recipes'){out.pieces=validNumber(d.pieces,true);if(!Number.isInteger(out.pieces))throw Error('Pieces produced must be a whole number');out.ratio=validNumber(d.ratio,true);if(out.ratio>1)throw Error('Target cost ratio must be greater than 0 and at most 1.');}
  if(['recipeIngredients','recipePackaging'].includes(entity)){out.recipe=validId(d.recipe);out.item=validId(d.item);out.qty=entity==='recipePackaging'?1:validNumber(d.qty,true)}
- if(entity==='overhead'){out.amount=validNumber(d.amount);if(action==='create')out.recipe=validId(d.recipe)}
+ if(entity==='overhead'){out.amount=validNumber(d.amount)}
  }
  return {action,entity,data:out};
 }

@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {Dat
 import {d1Repository} from '../src/repositories/d1.mjs';import {recipeService} from '../src/services/recipes.mjs';import {calculateRecipes} from '../public/pricing.mjs';
 test('D1 repository persists a complete recipe through the service and rejects invalid writes',async()=>{
  const sqlite=new DatabaseSync(':memory:');sqlite.exec(readFileSync(new URL('../migrations/0001_initial.sql',import.meta.url),'utf8'));
+ sqlite.exec(readFileSync(new URL('../migrations/0002_standard_overhead.sql',import.meta.url),'utf8'));
  const db={prepare(sql){const s=sqlite.prepare(sql);let args=[];return {bind(...a){args=a;return this},async all(){return {results:s.all(...args)}},async run(){return {meta:s.run(...args)}}}}};
  const service=recipeService(d1Repository(db));
  try{
@@ -15,6 +16,13 @@ test('D1 repository persists a complete recipe through the service and rejects i
  await assert.rejects(create('recipes',{name:'Bad',pieces:20,ratio:35}),/ratio/);
  await assert.rejects(create('recipeIngredients',{name:'Broken',recipe:r.id,item:crypto.randomUUID(),qty:1}),/FOREIGN KEY/);
  assert.equal(data.ingredients.length,1);
+ const shared=await create('overhead',{name:'Labor',amount:25});
+ const other=await create('recipes',{name:'Other batch',pieces:10,ratio:.35});
+ data=await service.read();assert.ok(calculateRecipes(data).every(r=>r.oc===25));
+ await service.mutate({action:'update',entity:'overhead',data:{id:shared.id,name:'Labor',amount:30}});
+ data=await service.read();assert.ok(calculateRecipes(data).every(r=>r.oc===30));
+ await service.mutate({action:'delete',entity:'overhead',data:{id:shared.id}});
+ data=await service.read();assert.ok(calculateRecipes(data).every(r=>r.oc===0));
  const pack=await create('packaging',{name:'Bag',weight:100,price:10});
  const line=await create('recipePackaging',{name:'Bag',recipe:r.id,item:pack.id,qty:999});
  data=await service.read();assert.equal(data.recipePackaging[0].qty,20);assert.equal(calculateRecipes(data)[0].pc,2);

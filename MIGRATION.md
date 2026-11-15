@@ -102,3 +102,14 @@ within the account plan's retention window. For an independent export, run
 `wrangler d1 export <database_name from wrangler.jsonc> --remote --output /secure/path/karamel.sql`.
 Keep exports outside Git. Restore procedures and live write smoke tests have not
 yet been independently exercised.
+
+## Standard overhead
+
+Production overhead is now a shared per-batch list in standardOverhead, exposed
+as overhead in the repository contract. Migration 0002 consolidates identical
+named historical amounts and fails on conflicting amounts. The old overhead
+table is retained as historical data, not used for current pricing. Deployment
+runs this idempotent migration before serving the updated application. Changes
+on the Standard overhead page immediately apply to all recipes. Live diagnostics
+read the new table. The original Notion adapter and initial import scripts are
+legacy source-migration tools, not a standard-overhead synchronization mechanism.
