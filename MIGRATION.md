@@ -87,3 +87,18 @@ DATA_BACKEND in Git prevents subsequent deployments from reverting to Notion.
 Do not cut over from an old snapshot if edits resumed after export: perform a
 fresh final import first. Existing deployment continues requiring NOTION_TOKEN
 until the transition is complete. APP_PASSWORD remains the existing Worker secret.
+
+## Production status
+
+D1 import run 43743855274 reconciled all six collections. Cutover run
+43743943634 deployed the committed D1 binding and passed live health, UI,
+and authenticated data-read checks. Notion is retained as a historical source;
+new app writes target D1 and are not synchronized back. Production deployment
+no longer requires a Notion token. The migration workflow still uses the token
+for explicitly requested future source exports.
+
+Backups: retain the Notion source and use Cloudflare D1 Time Travel for recovery
+within the account plan's retention window. For an independent export, run
+`wrangler d1 export <database_name from wrangler.jsonc> --remote --output /secure/path/karamel.sql`.
+Keep exports outside Git. Restore procedures and live write smoke tests have not
+yet been independently exercised.
