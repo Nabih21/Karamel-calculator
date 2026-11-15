@@ -12,4 +12,4 @@ const key=randomBytes(32),iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm'
 const payload=Buffer.concat([cipher.update(JSON.stringify(data)),cipher.final()]);
 const wrapped=publicEncrypt(Buffer.from(process.env.DIAGNOSTIC_KEY,'base64').toString(),key);
 const envelope=JSON.stringify({key:wrapped.toString('base64'),iv:iv.toString('base64'),tag:cipher.getAuthTag().toString('base64'),payload:payload.toString('base64')});
-console.log('::notice title=Encrypted D1 diagnostic::'+Buffer.from(envelope).toString('base64'));
+const encoded=Buffer.from(envelope).toString('base64');for(let i=0;i<encoded.length;i+=2000)console.log('::notice title=Encrypted D1 diagnostic '+String(i/2000).padStart(4,'0')+'::'+encoded.slice(i,i+2000));
