@@ -14,7 +14,7 @@ if(k==='recipePackaging')return{id:x.id,name:title(p,'Ligne'),recipe:relation(p,
 if(k==='overhead')return{id:x.id,name:title(p,'Frais général'),recipe:relation(p,'Recette'),amount:num(p,'Montant (CAD)')};
 }
 const text=(name,value)=>({[name]:{title:[{text:{content:String(value).slice(0,2000)}}]}});
-const n=(name,value)=>({[name]:{number:Number(value)}});
+const n=(name,value)=>({[name]:{number:value===null?null:Number(value)}});
 const rel=(name,id)=>({[name]:{relation:[{id}]}});
 function validName(s){if(typeof s!=='string'||!s.trim()||s.length>200)throw Error('Enter a name (1–200 characters).');return s.trim()}
 function validNumber(x,positive=false,optional=false){if(optional&&(x===null||x===undefined||x===''))return null;if(x===null||x===undefined||x===''||!Number.isFinite(Number(x))||Number(x)<0||(positive&&Number(x)===0))throw Error('Enter a valid nonnegative number.');return Number(x)}
