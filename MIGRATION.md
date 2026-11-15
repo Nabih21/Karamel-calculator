@@ -1,0 +1,70 @@
+# Database architecture and D1 migration
+
+The HTTP entry point (`src/worker.mjs`) delegates to the application service
+(`src/services/recipes.mjs`). Domain validation (`src/domain/recipes.mjs`) and
+pure pricing (`public/pricing.mjs`, shared with Node tests) contain no database
+calls. Composition (`src/composition.mjs`) chooses a repository. Each repository
+implements `list(entity)`, `create(entity, data)`, and `update(entity, data)` using
+the same plain records. SQL and Notion properties stay inside their adapters.
+The Node entry point also uses the shared Worker handler. D1 development uses
+Wrangler because the Node entry point cannot supply a D1 binding.
+
+Notion remains the default. Setting DATA_BACKEND=d1 requires a DB binding;
+there is no automatic fallback or dual write. Missing bindings fail closed.
+Pricing behavior is preserved in this first migration stage; the previously
+identified missing-value display issues still need a separate fix. New writes
+reject target cost ratios above 1.
+
+## Local workflow (Node 22.13+)
+
+Use Wrangler 4 (the onboarding installation is at
+/workspace/karamel-tools/node_modules/.bin/wrangler).
+
+```
+wrangler d1 migrations apply karamel-local --local --config wrangler.local.json
+wrangler dev --local --config wrangler.local.json
+npm test
+npm run check
+```
+
+Provide APP_PASSWORD through an ignored `.dev.vars` for authenticated local
+requests. Do not commit it. Local config uses a deliberately local-only database
+identifier and must not be deployed. Production wrangler.jsonc is unchanged.
+
+## Migration procedure
+
+1. Pause edits in the old app before the final export. Keep Notion as a backup.
+2. Supply NOTION_TOKEN securely in the shell environment, then run:
+   `node scripts/export-notion.mjs /secure/path/notion-export.json`.
+   This reads all pages in all six collections without a row cap. Output uses
+   exclusive creation and restrictive permissions; it contains business data.
+3. Review source schemas first: the adapter supports number/numeric formula
+   fields and single relations. Rollups and multiple relations require explicit
+   mapping before migration. Export is the application's normalized view, not a
+   full archival backup of Notion; preserve a separate full Notion export.
+4. Run `node scripts/import-sql.mjs /secure/path/notion-export.json /secure/path/import.sql`.
+   It validates against the SQLite schema and foreign keys before generating SQL.
+   Null/incomplete fields remain null. Invalid values (including ratio >1) or
+   dangling references stop generation; correct the source rather than silently
+   dropping records. Never commit exports or generated SQL.
+5. Rehearse import into an empty local database using
+   `wrangler d1 execute karamel-local --local --config wrangler.local.json --file /secure/path/import.sql`.
+   Inserts preserve IDs and reject duplicates; this is deliberately not an upsert.
+6. Create the production database with `wrangler d1 create karamel`, then add its
+   returned ID and `binding: "DB"`, `database_name: "karamel"`, and
+   `migrations_dir: "migrations"` to wrangler.jsonc's d1_databases array.
+7. Apply schema with `wrangler d1 migrations apply karamel --remote`, then import
+   into the empty database with `wrangler d1 execute karamel --remote --file /secure/path/import.sql`.
+   Keep traffic on Notion. If import fails partway, inspect the target; do not
+   blindly rerun or delete data. Rehearse again in a fresh database.
+8. Compare all IDs, counts, values, relationships, and recipe calculations with
+   the frozen export; test authenticated read/create/update on a staging Worker.
+9. Set production vars.DATA_BACKEND to d1 and deploy only after reconciliation.
+   Keep APP_PASSWORD. The existing deployment workflow still requires/publishes
+   NOTION_TOKEN during this transition; remove those steps after cutover is verified.
+10. Verify production reads, edits, and backup/export procedures before reopening
+    editing. Switching back to Notion is safe only before new D1 writes; otherwise
+    reconcile those writes first. There is no reverse sync.
+
+Live export, remote database creation, reconciliation, and cutover have not been
+performed. They require authorized access to the real data and Cloudflare account.
