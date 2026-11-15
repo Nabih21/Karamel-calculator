@@ -1,0 +1,22 @@
+name: Diagnose D1 records privately
+on:
+  workflow_dispatch:
+    inputs:
+      public_key:
+        description: Base64 PEM public encryption key
+        required: true
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/diagnose-d1.mjs
+        env:
+          DIAGNOSTIC_KEY: ${{ inputs.public_key }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
