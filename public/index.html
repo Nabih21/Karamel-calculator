@@ -8,8 +8,8 @@
 <div class="lock" id="lock"><div class="lockbox"><h1>Karamel Studio</h1><p>Enter your app password to open your recipe workspace.</p><form id="login"><div class="field"><label for="pw">App password</label><input id="pw" type="password" autocomplete="current-password" required></div><button class="btn" style="width:100%">Open workspace</button></form><p id="loginerror" class="error"></p></div></div>
 <div class="modalcover hidden" id="modal"><div class="modal"><h2 id="modaltitle">Edit</h2><form id="form"><div id="fields"></div><div class="modalfooter"><button type="button" class="btn secondary" id="cancel">Cancel</button><button class="btn" id="save">Save changes</button></div></form></div></div>
 <script type="module">
-import {cost,calculateRecipes} from "/pricing.mjs";
-import {currency,unitCurrency} from "/format.mjs";
+import {cost,calculateRecipes} from "/pricing.mjs?v=c8ea08d82e78";
+import {currency,unitCurrency} from "/format.mjs?v=537b191ac3d3";
 'use strict';
 const q=s=>document.querySelector(s);let pw='',data={},tab='dashboard',selected=null;
 const $=(tag,attrs,...children)=>{const e=document.createElement(tag);for(const [k,v]of Object.entries(attrs||{})){if(k==='class')e.className=v;else if(k==='onclick')e.onclick=v;else if(k==='text')e.textContent=v;else if(k==='value')e.value=v;else e.setAttribute(k,v)}for(const c of children.flat()){if(c!==null&&c!==undefined)e.append(typeof c==='string'?document.createTextNode(c):c)}return e};

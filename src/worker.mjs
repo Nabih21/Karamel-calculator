@@ -28,6 +28,7 @@ export default {async fetch(request,env){
  if(request.method!=='GET'&&request.method!=='HEAD')return response(405,{error:'Method not allowed'});
  const asset=await env.ASSETS.fetch(request);
  const h=new Headers(asset.headers);
+ h.set('Cache-Control','no-store');
  h.set('X-Content-Type-Options','nosniff');h.set('Referrer-Policy','no-referrer');
  h.set('Content-Security-Policy',"frame-ancestors 'self' https://www.notion.so https://notion.so https://*.notion.site; default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'");
  return new Response(asset.body,{status:asset.status,headers:h});
