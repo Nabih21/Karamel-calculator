@@ -15,5 +15,17 @@ test('D1 repository persists a complete recipe through the service and rejects i
  await assert.rejects(create('recipes',{name:'Bad',pieces:20,ratio:35}),/ratio/);
  await assert.rejects(create('recipeIngredients',{name:'Broken',recipe:r.id,item:crypto.randomUUID(),qty:1}),/FOREIGN KEY/);
  assert.equal(data.ingredients.length,1);
+ const pack=await create('packaging',{name:'Bag',weight:100,price:10});
+ const line=await create('recipePackaging',{name:'Bag',recipe:r.id,item:pack.id,qty:999});
+ data=await service.read();assert.equal(data.recipePackaging[0].qty,20);assert.equal(calculateRecipes(data)[0].pc,2);
+ await service.mutate({action:'update',entity:'recipes',data:{id:r.id,name:'Truffles',pieces:24,ratio:.35}});
+ data=await service.read();assert.equal(data.recipePackaging[0].qty,24);assert.ok(Math.abs(calculateRecipes(data)[0].pc-2.4)<1e-10);
+ await assert.rejects(service.mutate({action:'update',entity:'recipePackaging',data:{id:line.id,qty:5}}),/cannot be edited/);
+ await service.mutate({action:'delete',entity:'recipePackaging',data:{id:line.id}});
+ data=await service.read();assert.equal(data.recipePackaging.length,0);assert.equal(data.packaging.length,1);
+ const ingredientLine=data.recipeIngredients[0];await service.mutate({action:'delete',entity:'recipeIngredients',data:{id:ingredientLine.id}});
+ data=await service.read();assert.equal(data.recipeIngredients.length,0);assert.equal(data.ingredients.length,1);assert.equal(calculateRecipes(data)[0].ready,false);
+ await assert.rejects(service.mutate({action:'delete',entity:'ingredients',data:{id:i.id}}),/Only recipe rows/);
+ await assert.rejects(service.mutate({action:'delete',entity:'recipePackaging',data:{id:line.id}}),/not found/);
  }finally{sqlite.close()}
 });

@@ -3,5 +3,6 @@ function fields(entity){if(!Object.hasOwn(columns,entity))throw Error('Unknown t
 export function d1Repository(db){return {
  async list(entity){fields(entity);return (await db.prepare(`SELECT * FROM "${entity}" ORDER BY id`).all()).results},
  async create(entity,data){const id=crypto.randomUUID();const record={...data,id,...(entity==='recipes'?{status:'Draft'}:{})};const keys=fields(entity).filter(k=>Object.hasOwn(record,k));await db.prepare(`INSERT INTO "${entity}" (${keys.map(k=>'"'+k+'"').join(',')}) VALUES (${keys.map(()=>'?').join(',')})`).bind(...keys.map(k=>record[k])).run();return {id}},
+ async delete(entity,{id}){if(!['recipeIngredients','recipePackaging','overhead'].includes(entity))throw Error('Only recipe rows can be removed');const result=await db.prepare(`DELETE FROM "${entity}" WHERE id=?`).bind(id).run();if(!result.meta.changes)throw Error('Record not found');return {id}},
  async update(entity,data){const keys=fields(entity).filter(k=>k!=='id'&&Object.hasOwn(data,k));if(!keys.length)throw Error('No changes');const result=await db.prepare(`UPDATE "${entity}" SET ${keys.map(k=>'"'+k+'"=?').join(',')} WHERE id=?`).bind(...keys.map(k=>data[k]),data.id).run();if(!result.meta.changes)throw Error('Record not found');return {id:data.id}}
 };}

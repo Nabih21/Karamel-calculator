@@ -5,14 +5,16 @@ function validId(s){if(!/^[a-f0-9-]{32,36}$/i.test(String(s)))throw Error('Inval
 export const entities=['ingredients','packaging','recipes','recipeIngredients','recipePackaging','overhead'];
 export function validateMutation({action,entity,data:d={}}){
  if(!entities.includes(entity))throw Error('Unknown table');
- if(!['create','update'].includes(action))throw Error('Unknown action');
+ if(!['create','update','delete'].includes(action))throw Error('Unknown action');
+ if(action==='delete'){if(!['recipeIngredients','recipePackaging','overhead'].includes(entity))throw Error('Only recipe rows can be removed');return {action,entity,data:{id:validId(d.id)}}}
+ if(action==='update'&&entity==='recipePackaging')throw Error('Packaging quantity follows pieces produced and cannot be edited');
  const out={};if(action==='update')out.id=validId(d.id);
  if(action==='update'&&['recipeIngredients','recipePackaging'].includes(entity))out.qty=validNumber(d.qty,true);
  else {
  out.name=validName(d.name);
  if(['ingredients','packaging'].includes(entity)){out.weight=validNumber(d.weight,true,true);out.price=validNumber(d.price,false,true)}
- if(entity==='recipes'){out.pieces=validNumber(d.pieces,true);out.ratio=validNumber(d.ratio,true);if(out.ratio>1)throw Error('Target cost ratio must be greater than 0 and at most 1.');}
- if(['recipeIngredients','recipePackaging'].includes(entity)){out.recipe=validId(d.recipe);out.item=validId(d.item);out.qty=validNumber(d.qty,true)}
+ if(entity==='recipes'){out.pieces=validNumber(d.pieces,true);if(!Number.isInteger(out.pieces))throw Error('Pieces produced must be a whole number');out.ratio=validNumber(d.ratio,true);if(out.ratio>1)throw Error('Target cost ratio must be greater than 0 and at most 1.');}
+ if(['recipeIngredients','recipePackaging'].includes(entity)){out.recipe=validId(d.recipe);out.item=validId(d.item);out.qty=entity==='recipePackaging'?1:validNumber(d.qty,true)}
  if(entity==='overhead'){out.amount=validNumber(d.amount);if(action==='create')out.recipe=validId(d.recipe)}
  }
  return {action,entity,data:out};
