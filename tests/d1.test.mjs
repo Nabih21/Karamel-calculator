@@ -31,9 +31,10 @@ test('D1 repository persists a complete recipe through the service and rejects i
  await assert.rejects(service.mutate({action:'update',entity:'recipePackaging',data:{id:line.id,qty:5}}),/cannot be edited/);
  await service.mutate({action:'delete',entity:'recipePackaging',data:{id:line.id}});
  data=await service.read();assert.equal(data.recipePackaging.length,0);assert.equal(data.packaging.length,1);
+ await assert.rejects(service.mutate({action:'delete',entity:'ingredients',data:{id:i.id}}),/used in a recipe/);
  const ingredientLine=data.recipeIngredients[0];await service.mutate({action:'delete',entity:'recipeIngredients',data:{id:ingredientLine.id}});
  data=await service.read();assert.equal(data.recipeIngredients.length,0);assert.equal(data.ingredients.length,1);assert.equal(calculateRecipes(data).find(recipe=>recipe.id===r.id).ready,false);
- await assert.rejects(service.mutate({action:'delete',entity:'ingredients',data:{id:i.id}}),/Only recipe rows/);
+ await service.mutate({action:'delete',entity:'ingredients',data:{id:i.id}});assert.equal((await service.read()).ingredients.length,0);
  await assert.rejects(service.mutate({action:'delete',entity:'recipePackaging',data:{id:line.id}}),/not found/);
  }finally{sqlite.close()}
 });

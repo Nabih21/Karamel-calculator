@@ -6,7 +6,7 @@ export const entities=['ingredients','packaging','recipes','recipeIngredients','
 export function validateMutation({action,entity,data:d={}}){
  if(!entities.includes(entity))throw Error('Unknown table');
  if(!['create','update','delete'].includes(action))throw Error('Unknown action');
- if(action==='delete'){if(!['recipeIngredients','recipePackaging','overhead'].includes(entity))throw Error('Only recipe rows can be removed');return {action,entity,data:{id:validId(d.id)}}}
+ if(action==='delete'){if(!['ingredients','recipeIngredients','recipePackaging','overhead'].includes(entity))throw Error('Only recipe rows can be removed');return {action,entity,data:{id:validId(d.id)}}}
  if(action==='update'&&entity==='recipePackaging')throw Error('Packaging quantity follows pieces produced and cannot be edited');
  const out={};if(action==='update')out.id=validId(d.id);
  if(action==='update'&&['recipeIngredients','recipePackaging'].includes(entity))out.qty=validNumber(d.qty,true);

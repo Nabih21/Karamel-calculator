@@ -31,7 +31,7 @@ return notion(env,'/pages/'+data.id,'PATCH',{properties});}throw Error('Unknown 
 
 export function notionRepository(env){return {
  async list(entity){return (await all(env,DS[entity])).map(x=>transform(entity,x))},
- async delete(entity,{id}){if(!['recipeIngredients','recipePackaging','overhead'].includes(entity))throw Error('Only recipe rows can be removed');return notion(env,'/pages/'+id,'PATCH',{archived:true})},
+ async delete(entity,{id}){if(!['ingredients','recipeIngredients','recipePackaging','overhead'].includes(entity))throw Error('Only recipe rows can be removed');return notion(env,'/pages/'+id,'PATCH',{archived:true})},
  async create(entity,data){return mutate(env,{action:'create',entity,data})},
  async update(entity,data){return mutate(env,{action:'update',entity,data})}
 };}
