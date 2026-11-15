@@ -37,6 +37,19 @@ test('incomplete purchase information can be edited without pretending its cost 
   }finally{globalThis.fetch=previous}
 });
 
+
+test('a real zero purchase price stays zero instead of becoming missing',async()=>{
+  const previous=globalThis.fetch;
+  let last;
+  globalThis.fetch=async (url,options)=>{last=JSON.parse(options.body);return Response.json({id:'new-page'})};
+  try{
+    const response=await call('POST','/api/mutate',{action:'create',entity:'ingredients',data:{name:'Complimentary sample',weight:100,price:0}});
+    assert.equal(response.status,200);
+    assert.equal(last.properties['Poids acheté (g)'].number,100);
+    assert.equal(last.properties["Prix d'achat (CAD)"].number,0);
+  }finally{globalThis.fetch=previous}
+});
+
 test('wrong password is rejected without reaching Notion',async()=>{
   const previous=globalThis.fetch;
   globalThis.fetch=()=>{throw Error('Notion should not be contacted')};
