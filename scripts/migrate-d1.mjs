@@ -3,6 +3,7 @@ import {readFile,writeFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import assert from 'node:assert/strict';
 import {columns} from '../src/repositories/d1.mjs';
+process.on('uncaughtException',error=>{console.error('::error::'+String(error.message).split('\n')[0].replaceAll('%','%25').replaceAll('\r','%0D'));process.exit(1)});
 const account=process.env.CLOUDFLARE_ACCOUNT_ID, token=process.env.CLOUDFLARE_API_TOKEN;
 const root=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/d1/database`;
 async function api(path,body){const r=await fetch(root+path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const j=await r.json();if(!r.ok||!j.success)throw Error(`Cloudflare request failed (${r.status}): ${JSON.stringify(j.errors)}`);return j.result}
@@ -20,7 +21,7 @@ for(const [entity,keys]of Object.entries(columns)){
  const result=await api(`/${id}/query`,{sql:`SELECT * FROM "${entity}" ORDER BY id`,params:[]});
  const actual=result[0].results;
  const normalize=rows=>rows.map(r=>Object.fromEntries(keys.map(k=>[k,r[k]??(k==='status'?'Draft':null)]))).sort((a,b)=>a.id.localeCompare(b.id));
- assert.deepEqual(normalize(actual),normalize(snapshot.data[entity]),`${entity} reconciliation failed`);
+ if(JSON.stringify(normalize(actual))!==JSON.stringify(normalize(snapshot.data[entity])))throw Error(`${entity} reconciliation failed; records withheld`);
 }
 await writeFile(process.env.GITHUB_STEP_SUMMARY,`## D1 import reconciled\nDatabase: \`${name}\`\nID: \`${id}\`\nAll six collections match the export, including IDs and relationships.\nProduction still uses Notion.\n`,{flag:'a'});
 console.log('D1 import reconciled. Production unchanged. Database ID:',id);
