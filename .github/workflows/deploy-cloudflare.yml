@@ -33,7 +33,13 @@ jobs:
             fi
           done
       - name: Run regression tests
-        run: npm test
+        run: |
+          if npm test > /tmp/karamel-tests.log 2>&1; then
+            cat /tmp/karamel-tests.log
+          else
+            while IFS= read -r line; do echo "::error::$line"; done < /tmp/karamel-tests.log
+            exit 1
+          fi
       - name: Install Wrangler
         run: npm install --no-save wrangler@4
       - name: Migrate shared overhead (idempotent)
