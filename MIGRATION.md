@@ -68,3 +68,22 @@ identifier and must not be deployed. Production wrangler.jsonc is unchanged.
 
 Live export, remote database creation, reconciliation, and cutover have not been
 performed. They require authorized access to the real data and Cloudflare account.
+
+## GitHub Actions (existing repository secrets)
+
+Run **Validate and import Notion into D1** in Actions. Start with `validate`;
+it exports and checks data without creating a database. For `import`, pause all
+recipe edits and check `edits_paused`. The workflow creates a fresh database,
+imports, compares every field of all six collections, and records the ID in the
+run summary. Source data is not uploaded as an artifact; temporary export files
+are deleted. Keep a separate Notion backup. A failed import can leave a new,
+partially populated database; it never overwrites a previous database. Reruns
+with the same run ID may conflict on database name; start a new run after diagnosis.
+
+Download the non-secret `d1-deployment-config` artifact after successful import.
+For cutover, review and replace wrangler.jsonc with this configuration in a new
+commit, then run the existing deployment workflow. Persisting the binding and
+DATA_BACKEND in Git prevents subsequent deployments from reverting to Notion.
+Do not cut over from an old snapshot if edits resumed after export: perform a
+fresh final import first. Existing deployment continues requiring NOTION_TOKEN
+until the transition is complete. APP_PASSWORD remains the existing Worker secret.

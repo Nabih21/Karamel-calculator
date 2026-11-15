@@ -1,0 +1,69 @@
+name: Validate and import Notion into D1
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Validate only, or create a new D1 database and import
+        type: choice
+        options:
+          - validate
+          - import
+        default: validate
+      edits_paused:
+        description: Recipe edits in Notion and the app are paused for the final export
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: karamel-production
+  cancel-in-progress: false
+jobs:
+  migration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+      EXPORT_PATH: ${{ runner.temp }}/karamel-export.json
+      IMPORT_PATH: ${{ runner.temp }}/karamel-import.sql
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.1'
+      - name: Check prerequisites
+        env:
+          MODE: ${{ inputs.mode }}
+          EDITS_PAUSED: ${{ inputs.edits_paused }}
+        run: |
+          test -n "$NOTION_TOKEN" || { echo 'Missing NOTION_TOKEN'; exit 1; }
+          if [ "$MODE" = import ]; then
+            test "$EDITS_PAUSED" = true || { echo 'Pause edits before final export'; exit 1; }
+            test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          fi
+      - run: npm test
+      - run: npm run check
+      - name: Export Notion and validate all records and relationships
+        run: |
+          umask 077
+          node scripts/export-notion.mjs "$EXPORT_PATH"
+          node scripts/import-sql.mjs "$EXPORT_PATH" "$IMPORT_PATH"
+      - name: Install pinned Wrangler
+        if: inputs.mode == 'import'
+        run: npm install --no-save --package-lock=false wrangler@4.162.0
+      - name: Import into a new database and reconcile every field
+        if: inputs.mode == 'import'
+        run: node scripts/migrate-d1.mjs
+      - name: Save non-secret D1 deployment configuration
+        if: inputs.mode == 'import'
+        uses: actions/upload-artifact@v4
+        with:
+          name: d1-deployment-config
+          path: wrangler.migration.json
+          retention-days: 30
+      - name: Delete runner copies of business data
+        if: always()
+        run: rm -f "$EXPORT_PATH" "$IMPORT_PATH"
