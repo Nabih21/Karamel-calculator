@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {currency,unitCurrency} from '../public/format.mjs';import {calculateRecipes} from '../public/pricing.mjs';
+test('display preserves tiny rates while regular amounts keep two decimals',()=>{assert.equal(currency(12.345),'$12.35');assert.equal(currency(0),'$0.00');assert.equal(unitCurrency(.0014),'$0.0014');assert.equal(unitCurrency(3/450),'$0.0067');assert.equal(unitCurrency(null),'—');const d={ingredients:[{id:'i',weight:450,price:3}],recipes:[{id:'r',pieces:24,ratio:.35}],recipeIngredients:[{recipe:'r',item:'i',qty:500}]};assert.equal(calculateRecipes(d)[0].total,500*3/450);});
